@@ -150,6 +150,8 @@ in
         `command`. `scooter-local up` writes them before deploying and `scooter-local
         sync` refreshes them. A source that fails keeps the key's current value; a
         changed Secret restarts the Deployments that read it as env.
+      '';
+    };
     brokerImage.build = mkOption {
       type = types.bool;
       default = false;

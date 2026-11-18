@@ -115,6 +115,16 @@ in
         colima the host is `192.168.5.1`).
       '';
     };
+    brokerImage.build = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        For `scooter.lib.mkLocal`: build this configuration's broker image on this
+        machine and import it into the cluster, instead of pulling the published one.
+        For a branch or contrib whose broker CI hasn't published. On macOS the build
+        runs in a `nixos/nix` container in the Docker VM, so it needs no Linux builder.
+      '';
+    };
     assetsHostPath = mkOption {
       type = types.str;
       default = "/var/lib/scooter/assets";

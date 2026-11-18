@@ -64,9 +64,21 @@
       # misses a shell's environment) agrees with the terminal.
       mkLocal = { system, module, buildSystem ? "x86_64-linux", port ? 8080 }:
         let
-          render = evalPlatformWith {
+          modules = [ ./local/preset.nix { scooter.agent.skills = scooterSkills; } module ];
+          published = evalPlatformWith { inherit system buildSystem modules; };
+          # scooter.local.brokerImage.build: the broker for the Docker VM's Linux, which
+          # `up` builds and imports, in place of the published one.
+          buildBroker = published.config.scooter.local.brokerImage.build;
+          brokerSystem = { aarch64-darwin = "aarch64-linux"; x86_64-darwin = "x86_64-linux"; }.${system} or system;
+          brokerImage = (evalPlatformWith { inherit system modules; buildSystem = brokerSystem; })
+            .config.scooter.images.agent-broker.package;
+          brokerRef = {
+            image = "scooter-local/agent-broker";
+            tag = published.config.scooter.imagesContentTag brokerImage;
+          };
+          render = if !buildBroker then published else evalPlatformWith {
             inherit system buildSystem;
-            modules = [ ./local/preset.nix { scooter.agent.skills = scooterSkills; } module ];
+            modules = modules ++ [{ scooter.images.agent-broker.ref = nixpkgs.lib.mapAttrs (_: nixpkgs.lib.mkForce) brokerRef; }];
           };
           provider = render.config.scooter.local.provider;
         in
@@ -78,6 +90,12 @@
           manifests = { ${provider} = render.config.kubernetes.resultYAML; };
           fixedProvider = provider;
           inherit port;
+          broker = nixpkgs.lib.optionalAttrs buildBroker {
+            ref = "${brokerRef.image}:${brokerRef.tag}";
+            # The .drv closure, not its outputs: a Mac can't build an aarch64-linux
+            # image, so `up` does, in Docker.
+            copyToDrv = builtins.unsafeDiscardOutputDependency brokerImage.copyTo.drvPath;
+          };
         };
     in
     flake-parts.lib.mkFlake { inherit inputs; } {

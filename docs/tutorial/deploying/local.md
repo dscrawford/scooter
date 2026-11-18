@@ -243,20 +243,27 @@ launchd.agents.scooter-local-sync = {
 
 launchd and systemd give commands a minimal PATH, so name programs by absolute path.
 
-### A broker of your own
+### Images of your own
 
-A branch that changes the broker or adds a contrib has no published broker image. With
-`scooter.local.brokerImage.build = true` in the module, `up` builds the broker for your
-configuration and imports it into the cluster. On Linux your own nix builds it; on
-macOS, which has no Linux builder, a `nixos/nix` container in the Docker VM does,
-keeping its store in the `scooter-local-nix` volume. The first build takes several
-minutes, later ones only what changed; `destroy` removes the volume.
+A branch that changes a service or adds a contrib has no published images for it. Set
+`local.build` on those images in the module, and `up` builds them for your configuration
+and imports them into the cluster:
 
-The other images still come from ghcr. A change under `contrib/` or `services/` changes
-their tags as well ([#1411](https://github.com/chadac-me/scooter/issues/1411)), so if
-`up` reports them missing, point them at published tags:
-`scooter.images.agent-sandbox-os.ref.tag = "…"`, and likewise `agent-sandbox-ui` and
-`agent-webhooks`.
+```nix
+scooter.images.agent-broker.local.build = true;
+scooter.images.agent-webhooks.local.build = true;
+```
+
+Each gets the ref `scooter-local/<name>:<content hash>`; the other images still come
+from ghcr. On Linux your own nix builds them. On macOS, which has no Linux builder, a
+`nixos/nix` container in the Docker VM does, keeping its store in the `scooter-local-nix`
+volume. The first build takes several minutes, later ones only what changed; `destroy`
+removes the volume.
+
+A change under `contrib/` or `services/` changes more tags than the images it touches
+([#1411](https://github.com/chadac-me/scooter/issues/1411)), so if `up` reports images
+missing, build them too, or point them at published tags:
+`scooter.images.agent-sandbox-os.ref.tag = "…"`.
 
 ## From here to a deployment
 

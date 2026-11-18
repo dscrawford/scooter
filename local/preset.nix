@@ -27,8 +27,27 @@ let
     "claude-opus-4.7" = { hint = "Most capable, slowest: the hardest reasoning. Answers arrive in one block."; };
   };
 
+  # scooter.images.<name>.local.build: one more option on every image.
+  localImage = { name, config, ... }: {
+    options.local.build = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        For `scooter.lib.mkLocal`: build this image on this machine and import it into
+        the cluster, instead of pulling the published one. For a branch or contrib CI
+        hasn't published. On macOS the build runs in a `nixos/nix` container in the
+        Docker VM, so it needs no Linux builder.
+      '';
+    };
+    # mkLocal sets the tag: the content hash of the build for the Docker VM's Linux.
+    config.ref.image = lib.mkIf config.local.build (lib.mkOverride 40 "scooter-local/${name}");
+  };
 in
 {
+  options.scooter.images = mkOption {
+    type = types.attrsOf (types.submoduleWith { modules = [ localImage ]; });
+  };
+
   options.scooter.local = {
     provider = mkOption {
       type = types.enum [ "claude-code" "anthropic" "ollama" "copilot" ];
@@ -150,16 +169,6 @@ in
         `command`. `scooter-local up` writes them before deploying and `scooter-local
         sync` refreshes them. A source that fails keeps the key's current value; a
         changed Secret restarts the Deployments that read it as env.
-      '';
-    };
-    brokerImage.build = mkOption {
-      type = types.bool;
-      default = false;
-      description = ''
-        For `scooter.lib.mkLocal`: build this configuration's broker image on this
-        machine and import it into the cluster, instead of pulling the published one.
-        For a branch or contrib whose broker CI hasn't published. On macOS the build
-        runs in a `nixos/nix` container in the Docker VM, so it needs no Linux builder.
       '';
     };
     assetsHostPath = mkOption {

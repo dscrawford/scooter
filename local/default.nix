@@ -4,7 +4,7 @@
 # - the generic app (`nix run .#local`): every provider's render, chosen at `up`;
 # - `scooter.lib.mkLocal { module }`: one render of the caller's configuration, with
 #   the provider it names (`fixedProvider`), so `up` asks for nothing but a credential.
-{ pkgs, lib, version, flake, manifests, agentSandboxVersion, fixedProvider ? "", port ? 8080, credentials ? { } }:
+{ pkgs, lib, version, flake, manifests, agentSandboxVersion, fixedProvider ? "", port ? 8080, credentials ? { }, broker ? { } }:
 let
   # Only the build-time placeholders; the script keeps the renders' runtime ones
   # (@AGENT_HOST_CLAUDE_TAG@, @OLLAMA_HOST@, @OLLAMA_MODEL@, @LOCAL_USER@, @LOCAL_EMAIL@)
@@ -22,6 +22,8 @@ let
     # Paths and commands, not values: the values stay on the host.
     "@credentials@" = lib.optionalString (credentials != { })
       (toString (pkgs.writeText "scooter-local-credentials.json" (builtins.toJSON credentials)));
+    "@brokerRef@" = broker.ref or "";
+    "@brokerCopyToDrv@" = broker.copyToDrv or "";
   };
   text = builtins.replaceStrings (builtins.attrNames vars) (builtins.attrValues vars)
     (builtins.readFile ./scooter-local.sh);

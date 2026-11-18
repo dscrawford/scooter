@@ -150,6 +150,14 @@ in
         `command`. `scooter-local up` writes them before deploying and `scooter-local
         sync` refreshes them. A source that fails keeps the key's current value; a
         changed Secret restarts the Deployments that read it as env.
+    brokerImage.build = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        For `scooter.lib.mkLocal`: build this configuration's broker image on this
+        machine and import it into the cluster, instead of pulling the published one.
+        For a branch or contrib whose broker CI hasn't published. On macOS the build
+        runs in a `nixos/nix` container in the Docker VM, so it needs no Linux builder.
       '';
     };
     assetsHostPath = mkOption {

@@ -15,6 +15,10 @@ MANIFESTS_COPILOT="@manifestsCopilot@"
 CREDENTIALS="@credentials@"
 # The agent-sandbox release the platform targets (same as test/support/cluster-up.sh).
 AGENT_SANDBOX_VERSION="@agentSandboxVersion@"
+# Set by scooter.lib.mkLocal when brokerImage.build is on: the broker's ref in the
+# render and the derivation that writes the image out (n2c's copyTo).
+BROKER_REF="@brokerRef@"
+BROKER_COPYTO_DRV="@brokerCopyToDrv@"
 
 CLUSTER="${SCOOTER_LOCAL_CLUSTER:-scooter}"
 NAMESPACE="scooter"
@@ -441,6 +445,53 @@ check_images() {
   fi
 }
 
+# --- broker image (scooter.local.brokerImage.build) -------------------------------
+
+# A tar of the image per tag. Under $STATE, which is under $HOME by default: on macOS the
+# Docker VM (colima, Docker Desktop) only shares $HOME with containers.
+broker_tar() { echo "$STATE/broker/agent-broker-${BROKER_REF##*:}.tar"; }
+
+# A Mac has no Linux builder: a nixos/nix container in the Docker VM builds the exported
+# derivations instead, keeping its /nix in a volume.
+build_broker() {
+  [ -n "$BROKER_REF" ] || return 0
+  local tar; tar=$(broker_tar)
+  [ -s "$tar" ] && return 0
+  command -v nix-store >/dev/null 2>&1 || die "nix is not on PATH, and building the broker image (brokerImage.build) needs it."
+  mkdir -p "$STATE/broker"
+  rm -f "$STATE"/broker/agent-broker-*.tar
+  log "building the broker image ${BROKER_REF} (the first build takes several minutes)..."
+  if [ "$(uname -s)" = Linux ]; then
+    local copy_to
+    copy_to=$(nix-store --realise "$BROKER_COPYTO_DRV") || die "building the broker image failed"
+    "$copy_to/bin/copy-to" "docker-archive:$tar.tmp:$BROKER_REF" >/dev/null || die "exporting the broker image failed"
+  else
+    # shellcheck disable=SC2046
+    nix-store --export $(nix-store --query --requisites "$BROKER_COPYTO_DRV") > "$STATE/broker/drvs.nar" \
+      || die "exporting the broker image's derivations failed"
+    # shellcheck disable=SC2016
+    docker run --rm -v scooter-local-nix:/nix -v "$STATE/broker:/work" nixos/nix sh -ec '
+      nix-store --import < /work/drvs.nar >/dev/null
+      out=$(nix-store --realise "$1")
+      "$out/bin/copy-to" "docker-archive:/work/$2:$3" >/dev/null' \
+      sh "$BROKER_COPYTO_DRV" "$(basename "$tar").tmp" "$BROKER_REF" \
+      || die "building the broker image in Docker failed; the output above says why."
+    rm -f "$STATE/broker/drvs.nar"
+  fi
+  mv "$tar.tmp" "$tar"
+}
+
+import_broker() {
+  [ -n "$BROKER_REF" ] || return 0
+  # crictl's own filter ignores the tag, so match the repository and tag columns.
+  if docker exec "k3d-${CLUSTER}-server-0" crictl images 2>/dev/null \
+      | grep -qE "^(docker\.io/)?${BROKER_REF%:*} +${BROKER_REF##*:} "; then
+    return 0
+  fi
+  log "importing ${BROKER_REF} into the cluster..."
+  k3d image import -c "$CLUSTER" "$(broker_tar)" >/dev/null || die "importing the broker image failed"
+}
+
 # --- deploy ------------------------------------------------------------------
 
 ensure_namespace() {
@@ -549,7 +600,9 @@ cmd_up() {
   need_docker
   check_docker_size
   mkdir -p "$STATE"
+  build_broker
   cluster_up
+  import_broker
   install_controller
   local provider; provider=$(current_provider)
   if [ -z "$provider" ]; then choose_provider; provider=$(current_provider); fi
@@ -595,6 +648,8 @@ cmd_destroy() {
     log "no cluster '$CLUSTER'"
   fi
   rm -rf "$STATE"
+  # brokerImage.build's nix store, on a Mac.
+  docker volume rm scooter-local-nix >/dev/null 2>&1 || true
   log "removed $STATE"
 }
 

@@ -631,6 +631,15 @@
             local-manifests = import ./local/check.nix { pkgs = hostPkgs; inherit lib; renders = localRenders; };
             # `scooter.lib.mkLocal` on the template's configuration: the declared shape builds.
             local-example = mkLocal { inherit system; module = ./local/template/scooter.nix; };
+            # brokerImage.build: the broker from the cluster's own image, the rest from ghcr.
+            local-broker-build =
+              let l = mkLocal { inherit system; module = { scooter.local.provider = "anthropic"; scooter.local.brokerImage.build = true; }; };
+              in hostPkgs.runCommand "local-broker-build" { } ''
+                grep -q 'image: scooter-local/agent-broker:' ${l.manifests.anthropic}
+                if grep -q 'ghcr.io/.*/agent-broker:' ${l.manifests.anthropic}; then echo "broker still on ghcr"; exit 1; fi
+                grep -q '^BROKER_COPYTO_DRV="/nix/store/.*-copy-to.drv"$' ${l}/bin/scooter-local
+                touch $out
+              '';
           } // lib.optionalAttrs hostPkgs.stdenv.hostPlatform.isLinux {
             # nixosModules.local evaluates into a service running that build.
             local-nixos-module =

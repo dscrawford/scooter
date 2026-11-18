@@ -448,9 +448,8 @@ check_images() {
 # Docker VM (colima, Docker Desktop) only shares $HOME with containers.
 broker_tar() { echo "$STATE/broker/agent-broker-${BROKER_REF##*:}.tar"; }
 
-# Builds the derivation mkLocal evaluated for the Docker VM's Linux. A Linux host builds
-# it with its own nix; a Mac has no Linux builder, so a nixos/nix container in the VM
-# builds it from the exported derivations, keeping its /nix in a volume between runs.
+# A Mac has no Linux builder: a nixos/nix container in the Docker VM builds the exported
+# derivations instead, keeping its /nix in a volume.
 build_broker() {
   [ -n "$BROKER_REF" ] || return 0
   local tar; tar=$(broker_tar)

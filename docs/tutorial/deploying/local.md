@@ -197,6 +197,21 @@ as `scooter-local.service` at boot (`down` when it stops); `port` and `stateDir`
 (default `/var/lib/scooter-local`) are options too. The service has no terminal, so the
 credential comes from `environmentFile`.
 
+### A broker of your own
+
+A branch that changes the broker or adds a contrib has no published broker image. With
+`scooter.local.brokerImage.build = true` in the module, `up` builds the broker for your
+configuration and imports it into the cluster. On Linux your own nix builds it; on
+macOS, which has no Linux builder, a `nixos/nix` container in the Docker VM does,
+keeping its store in the `scooter-local-nix` volume. The first build takes several
+minutes, later ones only what changed; `destroy` removes the volume.
+
+The other images still come from ghcr. A change under `contrib/` or `services/` changes
+their tags as well ([#1411](https://github.com/chadac-me/scooter/issues/1411)), so if
+`up` reports them missing, point them at published tags:
+`scooter.images.agent-sandbox-os.ref.tag = "…"`, and likewise `agent-sandbox-ui` and
+`agent-webhooks`.
+
 ## From here to a deployment
 
 The preset is an ordinary Scooter module (`scooter.kubenixModules.local`), so the same

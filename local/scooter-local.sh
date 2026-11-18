@@ -7,6 +7,8 @@ VERSION="@version@"
 FLAKE="@flake@"
 # Set by scooter.lib.mkLocal: the one provider the baked configuration names.
 FIXED_PROVIDER="@fixedProvider@"
+# JSON of scooter.local.secretFiles (Secret -> key -> path), or empty.
+SECRET_FILES="@secretFiles@"
 MANIFESTS_CLAUDE_CODE="@manifestsClaudeCode@"
 MANIFESTS_ANTHROPIC="@manifestsAnthropic@"
 MANIFESTS_OLLAMA="@manifestsOllama@"
@@ -297,6 +299,22 @@ put_secret() {
     --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 }
 
+# The configuration's scooter.local.secretFiles, each Secret replaced from its files.
+ensure_secret_files() {
+  [ -n "$SECRET_FILES" ] || return 0
+  local name key path
+  local -a args
+  while IFS= read -r name; do
+    args=()
+    while IFS=$'\t' read -r key path; do
+      [ -r "$path" ] || die "Secret $name: $path (its $key) is not a readable file"
+      args+=("--from-file=$key=$path")
+    done < <(jq -r --arg n "$name" '.[$n] | to_entries[] | "\(.key)\t\(.value)"' "$SECRET_FILES")
+    kubectl -n "$NAMESPACE" create secret generic "$name" "${args[@]}" \
+      --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  done < <(jq -r 'keys[]' "$SECRET_FILES")
+}
+
 # The provider's credential: asked once, kept only in the cluster. `force` re-asks.
 ensure_provider_secret() {
   local provider="$1" force="${2:-}" value
@@ -484,6 +502,7 @@ cmd_up() {
   echo "$provider" > "$provider_file"
   ensure_namespace
   ensure_conv_token
+  ensure_secret_files
   ensure_provider_secret "$provider"
   local manifests; manifests=$(render "$provider")
   check_images "$manifests"

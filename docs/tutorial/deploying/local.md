@@ -176,6 +176,25 @@ names the provider, `up` asks for nothing but the credential (or reads it from t
 environment). `nix build .#manifests` gives the same render as YAML for
 `kubectl apply -f` on a cluster of your own.
 
+A contrib that takes a Secret, such as GitHub's App key, gets it from a file on your
+machine through `scooter.local.secretFiles`: `up` creates each Secret from its files
+before it applies the platform, and replaces it on every `up`, so the value stays out
+of the Nix store.
+
+```nix
+{
+  scooter.local.secretFiles.github-app-key.private-key = "/run/secrets/github-app-key";
+  contribs.github = {
+    enable = true;
+    appId = "123456";
+    installationId = "12345678";
+    privateKeySecret = { name = "github-app-key"; key = "private-key"; };
+    # Nothing reaches this machine from GitHub.
+    webhooksEnabled = false;
+  };
+}
+```
+
 ### On NixOS
 
 ```nix

@@ -77,6 +77,7 @@
           flake = self;
           manifests = { ${provider} = render.config.kubernetes.resultYAML; };
           fixedProvider = provider;
+          inherit (render.config.scooter.local) secretFiles;
           inherit port;
         };
     in

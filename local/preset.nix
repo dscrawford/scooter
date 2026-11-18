@@ -115,6 +115,18 @@ in
         colima the host is `192.168.5.1`).
       '';
     };
+    secretFiles = mkOption {
+      type = types.attrsOf (types.attrsOf (types.strMatching "/.+"));
+      default = { };
+      example = { github-app-key.private-key = "/run/secrets/github-app-key"; };
+      description = ''
+        Secrets `up` creates from files on this machine, before it applies the platform:
+        Secret name, then key, then an absolute path read at `up`, so the value never
+        enters the Nix store. For the contribs that take a Secret, such as
+        `contribs.github.privateKeySecret`. Each `up` replaces the Secret with the files'
+        current contents.
+      '';
+    };
     assetsHostPath = mkOption {
       type = types.str;
       default = "/var/lib/scooter/assets";

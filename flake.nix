@@ -816,6 +816,8 @@
         lib.mkLocal = mkLocal;
         # services.scooter-local: the same, as a NixOS service.
         nixosModules.local = import ./local/nixos-module.nix { inherit mkLocal; };
+        # Node half of scooter.sandbox.sharedStore: the trusted sandbox daemon socket.
+        nixosModules.sharedStoreNode = ./modules/node/shared-nix-store.nix;
 
         # `nix flake init -t github:chadac-me/scooter#local`: that deployment.
         templates.local = {

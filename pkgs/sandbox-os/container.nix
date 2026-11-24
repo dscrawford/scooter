@@ -16,6 +16,9 @@
   # modules/sandbox-os/overlay-store.nix).
   programs.overlayStore.enable = true;
 
+  # Inert unless the deployment mounts a node store (scooter.sandbox.sharedStore).
+  programs.sharedStore.enable = true;
+
   # The built-in web services are declared by default so they are startable on
   # demand, with mkDefault so a deployment can turn one off.
   webServices.terminal.enable = lib.mkDefault true;

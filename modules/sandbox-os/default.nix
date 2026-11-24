@@ -23,6 +23,7 @@
     ./broker-modules.nix
     ./local-modules.nix
     ./overlay-store.nix
+    ./shared-store.nix
     ./journal-persist.nix
     ./warm-store-seed.nix
     ./store-gc.nix

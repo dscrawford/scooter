@@ -80,6 +80,12 @@ in
         lower=${lib.escapeShellArg cfg.lowerPath}
         upper_root=${lib.escapeShellArg cfg.upperPath}
 
+        # The shared node store (shared-store.nix) already owns /nix/store.
+        if [ -f /run/scooter/nix-store.conf ]; then
+          echo "overlay-store: shared node store active; store unchanged"
+          exit 0
+        fi
+
         # No writable volume means the store stays as-is.
         if [ ! -d "$upper_root" ]; then
           echo "overlay-store: no upper volume at $upper_root; store unchanged"

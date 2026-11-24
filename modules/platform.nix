@@ -321,7 +321,7 @@ in
   # ./testing.nix is absent on purpose (test-only overrides are opted into by a test
   # manifest), and the contribs arrive via `contribModules`, each declaring its own
   # `contribs.<name>` options and manifests with contrib/spec.nix as their schema.
-  imports = [ kubenix.modules.k8s ./images.nix ./availability.nix ./scooter-packages.nix ./db-spec.nix ./postgres.nix ./db-migrate.nix ./schema-gate.nix ./contrib-db.nix ./contrib-env.nix ./contrib-tokenproxy.nix ./contrib-approvals.nix ./broker.nix ./sandbox-pod.nix ./sandbox-volumes.nix ./webhooks.nix ./byoc.nix ./scheduler.nix ./conversation-controller.nix ./warm-store-controller.nix ./network-policy.nix ./legacy-state-migration.nix ./event-backfill.nix ./skills ]
+  imports = [ kubenix.modules.k8s ./images.nix ./availability.nix ./scooter-packages.nix ./db-spec.nix ./postgres.nix ./db-migrate.nix ./schema-gate.nix ./contrib-db.nix ./contrib-env.nix ./contrib-tokenproxy.nix ./contrib-approvals.nix ./broker.nix ./sandbox-pod.nix ./sandbox-volumes.nix ./shared-store.nix ./webhooks.nix ./byoc.nix ./scheduler.nix ./conversation-controller.nix ./warm-store-controller.nix ./network-policy.nix ./legacy-state-migration.nix ./event-backfill.nix ./skills ]
     ++ contribModules;
 
   # Declared only so a definition on the old root reaches `legacyRoot`'s message; no
@@ -1896,6 +1896,9 @@ in
                   # The sandbox PVCs, built from scooter.sandbox.volumes.
                   { name = "SANDBOX_VOLUME_CLAIMS"; value = builtins.toJSON cfg.sandbox.renderedVolumeClaims; }
                 ]
+                ++ lib.optional cfg.sandbox.sharedStore.enable
+                  # The shared node store replaces the overlay upper PVC for new conversations.
+                  { name = "SANDBOX_OVERLAY_STORE"; value = "0"; }
                 ++ (let wsv = cfg.sandbox.volumes.workspace; in
                   # expand_workspace's limits; unset leaves the tool off.
                   lib.optionals (wsv.maxStorage != null) (

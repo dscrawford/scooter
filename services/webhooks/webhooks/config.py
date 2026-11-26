@@ -65,6 +65,8 @@ class WebhooksSettings(ScooterBaseSettings):
     # Trigger pattern (text mention) and issue/PR label that spawn a conversation.
     mention_pattern: str = "@agent"
     label_trigger: str = "scooter"
+    # GitHub label that spawns a one-shot conversation instead; empty disables it.
+    oneshot_label_trigger: str = "scooter-oneshot"
 
     # Comment/review authors to drop (comma-separated), matched case-insensitively.
     ignore_usernames: str = ""

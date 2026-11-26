@@ -16,6 +16,7 @@ class TriggerPolicy:
 
     mention_pattern: str = "@scooter"
     label_trigger: str = "scooter"
+    oneshot_label_trigger: str = "scooter-oneshot"
     ignore_usernames: str = ""
     ignore_bot_authors: bool = True
 

@@ -542,3 +542,21 @@ async def test_push_link_rejection_returns_false_and_warns(monkeypatch, caplog):
     assert ok is False
     warned = [r for r in caplog.records if r.message == "push link rejected"]
     assert warned and warned[0].status == 409
+
+
+async def test_create_oneshot_rides_the_create_body(monkeypatch):
+    captured: dict = {}
+    _patch_stream(monkeypatch, _sse('{"type":"RUN_FINISHED","threadId":"t","runId":"r"}'), captured)
+
+    await ahc.create_conversation("score this home", oneshot=True)
+
+    assert captured["create_json"]["oneshot"] is True
+
+
+async def test_create_is_not_oneshot_by_default(monkeypatch):
+    captured: dict = {}
+    _patch_stream(monkeypatch, _sse('{"type":"RUN_FINISHED","threadId":"t","runId":"r"}'), captured)
+
+    await ahc.create_conversation("do a thing")
+
+    assert "oneshot" not in captured["create_json"]

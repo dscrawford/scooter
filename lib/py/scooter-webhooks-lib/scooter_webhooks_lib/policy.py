@@ -14,6 +14,7 @@ class TriggerPolicyConfig(Protocol):
 
     mention_pattern: str
     label_trigger: str
+    oneshot_label_trigger: str
     ignore_usernames: str
     ignore_bot_authors: bool
 
@@ -56,6 +57,12 @@ def strip_mention(text: str) -> str:
 def is_trigger_label(label: str) -> bool:
     """Whether this is the label whose addition spawns a conversation."""
     return (label or "").lower() == _cfg().label_trigger.lower()
+
+
+def is_oneshot_label(label: str) -> bool:
+    """Whether this is the label that spawns a one-shot conversation, deleted with its sandbox once its run ends."""
+    want = _cfg().oneshot_label_trigger
+    return bool(want) and (label or "").lower() == want.lower()
 
 
 def is_ignored_user(username: str) -> bool:

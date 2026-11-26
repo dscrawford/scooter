@@ -564,7 +564,8 @@ async def _handle_issue_event(payload: dict):
         return
 
     label = payload.get("label", {}).get("name", "")
-    if not policy.is_trigger_label(label):
+    oneshot = policy.is_oneshot_label(label)
+    if not (oneshot or policy.is_trigger_label(label)):
         return
 
     issue = payload.get("issue", {})
@@ -593,7 +594,7 @@ async def _handle_issue_event(payload: dict):
             conv_title=f"Issue #{issue_number}: {issue_title}",
             owner=owner, repo_name=repo, issue_number=issue_number,
             invoking_user=payload.get("sender", {}).get("login"),
-            sender=actor_on(payload, issue), refs=refs,
+            sender=actor_on(payload, issue), refs=refs, oneshot=oneshot,
         )
     )
 
@@ -785,7 +786,8 @@ async def _handle_pr_event(payload: dict):
         return
 
     label = payload.get("label", {}).get("name", "")
-    if not policy.is_trigger_label(label):
+    oneshot = policy.is_oneshot_label(label)
+    if not (oneshot or policy.is_trigger_label(label)):
         return
 
     pr = payload.get("pull_request", {})
@@ -815,7 +817,7 @@ async def _handle_pr_event(payload: dict):
             conv_title=f"PR #{pr_number}: {pr_title}",
             owner=owner, repo_name=repo, issue_number=pr_number,
             invoking_user=payload.get("sender", {}).get("login"),
-            sender=actor_on(payload, pr), refs=refs,
+            sender=actor_on(payload, pr), refs=refs, oneshot=oneshot,
         )
     )
 
@@ -857,6 +859,7 @@ async def _background_create_conversation(
     conv_title: str, owner: str, repo_name: str,
     issue_number: int, invoking_user: str | None = None,
     sender: Sender | None = None, refs: list[AttachmentRef] | None = None,
+    oneshot: bool = False,
 ) -> None:
     # Runs pre-run, since create_conversation blocks until the whole agent turn finishes.
     async def _register(conv_id: str) -> None:
@@ -879,7 +882,7 @@ async def _background_create_conversation(
     try:
         result = await create_conversation(
             message, repository=repo, git_provider="github", title=conv_title, on_created=_register,
-            owner=conv_owner, source="github", sender=sender,
+            owner=conv_owner, source="github", sender=sender, oneshot=oneshot,
             images=await _first_message_images(owner, repo_name, refs or []) or None,
         )
         if not result:

@@ -15,6 +15,7 @@ class TriggerPolicy:
 
     mention_pattern: str = "@agent"
     label_trigger: str = "scooter"
+    oneshot_label_trigger: str = "scooter-oneshot"
     ignore_usernames: str = ""
     ignore_bot_authors: bool = True
     repo_descriptions: dict[str, str] = field(default_factory=dict)

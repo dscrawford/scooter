@@ -55,12 +55,14 @@ def _conversations_url() -> str:
     return f"{_cfg().agent_host_url.rstrip('/')}/conversations"
 
 
-async def _create_conversation(owner: str | None) -> str | None:
+async def _create_conversation(owner: str | None, oneshot: bool = False) -> str | None:
     """Ask the server for a conversation id (POST /conversations), or None on failure; `owner` rides the body because the identity header's name is deployment-configurable."""
     headers = {"content-type": "application/json", **_auth()}
     body: dict = {}
     if owner:
         body["owner"] = owner
+    if oneshot:
+        body["oneshot"] = True
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(_conversations_url(), json=body, headers=headers)
@@ -108,13 +110,14 @@ async def create_conversation(
     files: list[dict] | None = None,
     source: str | None = None,
     sender: Sender | None = None,
+    oneshot: bool = False,
 ) -> dict | None:
     """Spawn an agent conversation for `initial_message` and return {conversation_id, result}, or None on failure.
 
     `on_created` is awaited with the conversation_id before the run starts, so the
     caller can register the target link before the agent's first reply tool call.
     """
-    conversation_id = await _create_conversation(owner)
+    conversation_id = await _create_conversation(owner, oneshot=oneshot)
     if conversation_id is None:
         return None
     task = initial_message

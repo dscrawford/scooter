@@ -13,6 +13,7 @@ from scooter_webhooks_lib import policy
 class StubConfig:
     mention_pattern: str = "@agent"
     label_trigger: str = "scooter"
+    oneshot_label_trigger: str = "scooter-oneshot"
     ignore_usernames: str = ""
     ignore_bot_authors: bool = True
     descriptions: dict[str, str] = field(default_factory=dict)
@@ -93,3 +94,15 @@ def test_policy_refuses_to_answer_unconfigured(monkeypatch):
     monkeypatch.setattr(policy, "_config", None)
     with pytest.raises(RuntimeError, match="init"):
         policy.mentions_agent("@agent")
+
+
+def test_oneshot_label_is_case_insensitive_and_distinct(cfg):
+    assert policy.is_oneshot_label("Scooter-Oneshot")
+    assert not policy.is_oneshot_label("scooter")
+    assert not policy.is_trigger_label("scooter-oneshot")
+
+
+def test_empty_oneshot_label_disables_it(cfg):
+    cfg.oneshot_label_trigger = ""
+    assert not policy.is_oneshot_label("")
+    assert not policy.is_oneshot_label("scooter-oneshot")

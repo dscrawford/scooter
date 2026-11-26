@@ -78,6 +78,11 @@ in
       default = "scooter";
       description = "Issue/PR label name that triggers a conversation (GitHub/GitLab/Jira).";
     };
+    oneshotLabelTrigger = mkOption {
+      type = types.str;
+      default = "scooter-oneshot";
+      description = "GitHub issue/PR label that triggers a one-shot conversation, deleted with its sandbox and volumes once its run ends. Empty disables it.";
+    };
     ignoreUsernames = mkOption {
       type = types.listOf types.str;
       default = [ ];
@@ -234,6 +239,7 @@ in
                   { name = "TEST_WEBHOOK_ENABLED"; value = lib.boolToString wcfg.testWebhook; }
                   { name = "MENTION_PATTERN"; value = wcfg.mentionPattern; }
                   { name = "LABEL_TRIGGER"; value = wcfg.labelTrigger; }
+                  { name = "ONESHOT_LABEL_TRIGGER"; value = wcfg.oneshotLabelTrigger; }
                   { name = "IGNORE_USERNAMES"; value = lib.concatStringsSep "," wcfg.ignoreUsernames; }
                   { name = "IGNORE_BOT_AUTHORS"; value = lib.boolToString wcfg.ignoreBotAuthors; }
                 ] ++ [
